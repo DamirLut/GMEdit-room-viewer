@@ -1,0 +1,1 @@
+{ "name": "room-viewer", "scripts": ["main.js"], "stylesheets": ["style.css"], "module": true }
