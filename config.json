@@ -1,1 +1,7 @@
-{ "name": "room-viewer", "scripts": ["main.js"], "stylesheets": ["style.css"], "module": true }
+{
+  "name": "room-viewer",
+  "scripts": ["main.js"],
+  "stylesheets": ["style.css"],
+  "module": true,
+  "git": "https://github.com/DamirLut/GMEdit-room-viewer"
+}
