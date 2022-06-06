@@ -34,7 +34,13 @@ class RoomEditor extends $gmedit['editors.Editor'] {
     this.render();
   }
 
-  getSprite(yyFile) {
+  getSprite(yyFile, folder = 'sprites', name) {
+    if (name) {
+      return $gmedit['gml.Project'].current.getImageURL(
+        folder + '/' + yyFile + '/' + name + '.png',
+      );
+    }
+
     const yy = $gmedit['electron.FileWrap'].readYyFileSync(yyFile.path);
     switch (yy.resourceType) {
       case 'GMObject': {
@@ -48,24 +54,61 @@ class RoomEditor extends $gmedit['editors.Editor'] {
       }
       case 'GMSprite': {
         const spriteFile = yy.frames[0].images[0].FrameId.name + '.png';
+
         const sprite = $gmedit['gml.Project'].current.getImageURL(
-          'sprites/' + yyFile.name + '/' + spriteFile,
+          folder + '/' + yyFile.name + '/' + spriteFile,
         );
-        console.log(yy);
+
         return {
           url: sprite,
-          offset: { x: 0, y: 0 },
+          offset: { x: yy.sequence.xorigin, y: yy.sequence.yorigin },
         };
       }
       case 'GMTileSet': {
-        return this.getSprite(yy.spriteId);
+        return {
+          url: this.getSprite(yyFile.name, 'tilesets', 'output_tileset'),
+          border: {
+            width: yyFile.out_tilewborder,
+            height: yyFile.out_tilehborder,
+          },
+          tile_count: yy.tile_count,
+          size: {
+            width: yy.tileWidth,
+            height: yy.tileHeight,
+          },
+          offset: {
+            x: 0,
+            y: 0,
+          },
+        };
       }
     }
+  }
+
+  drawSprite(image, x = 0, y = 0, rotate = 0, xscale = 1, yscale = 1) {
+    this.context.save();
+    this.context.translate(x, y);
+    this.context.rotate(rotate);
+    this.context.scale(xscale, yscale);
+    this.context.drawImage(image, 0, 0);
+    this.context.restore();
   }
 
   render() {
     this.canvas.width = this.file.roomSettings.Width;
     this.canvas.height = this.file.roomSettings.Height;
+
+    const VOID_TILE = 2147483648;
+    const TileBit_Mask = 524287;
+    const TileBit_Flip = 29;
+    const TileBit_Mirror = 28;
+    const TileBit_Rotate90 = 30;
+
+    const checkBits = (value, bits) => (value & bits) == bits;
+    const isTileFlipped = (index) => checkBits(index, TileBit_Flip);
+    const isTileMirror = (index) => checkBits(index, TileBit_Mirror);
+    const isTileRotate90 = (index) => checkBits(index, TileBit_Rotate90);
+
     this.file.layers.reverse().forEach((layer) => {
       switch (layer.resourceType) {
         case 'GMRInstanceLayer': {
@@ -74,12 +117,13 @@ class RoomEditor extends $gmedit['editors.Editor'] {
             const spr = this.getSprite(instance.objectId);
             sprite.src = spr.url;
             sprite.onload = () => {
-              this.context.drawImage(
+              this.drawSprite(
                 sprite,
                 instance.x - spr.offset.x,
                 instance.y - spr.offset.y,
-                instance.scaleX * sprite.width,
-                instance.scaleY * sprite.height,
+                0,
+                instance.scaleX,
+                instance.scaleY,
               );
             };
           });
@@ -116,38 +160,43 @@ class RoomEditor extends $gmedit['editors.Editor'] {
           break;
         }
         case 'GMRTileLayer': {
+          console.log(layer);
           const tileset = new Image();
           const spr = this.getSprite(layer.tilesetId);
           tileset.src = spr.url;
+
           tileset.onload = () => {
-            const tile_width = 16; //layer.tiles.SerialiseWidth;
-            const tile_height = 16; //layer.tiles.SerialiseHeight;
+            const grid_x = layer.tiles.SerialiseWidth;
+            const grid_y = layer.tiles.SerialiseHeight;
+            const tile_width = spr.size.width;
+            const tile_height = spr.size.height;
             const tiles = layer.tiles.TileSerialiseData;
-            const all_tiles = Math.floor(
-              (tileset.width / tile_width) * (tileset.height / tile_height),
-            );
-            let tile_id = 0;
-            for (let y = 0; y < this.canvas.height / tile_height; y++) {
-              for (let x = 0; x < this.canvas.width / tile_width; x++) {
-                const brushId = tiles[tile_id];
-                tile_id++;
-                //if (brushId == 0 || brushId == 2147483648) continue;
-                const brush_x = brushId % all_tiles;
-                const brush_y = brushId / all_tiles;
-                this.context.drawImage(
-                  tileset,
-                  brush_x * tile_width,
-                  brush_y,
-                  tile_width,
-                  tile_height,
-                  layer.x + x * tile_width,
-                  layer.y + y * tile_height,
-                  tile_width,
-                  tile_height,
-                );
+            for (let i = 0; i < tiles.length; i++) {
+              let brush_id = tiles[i];
+              if (brush_id == 0 || brush_id == VOID_TILE) continue;
+
+              if (brush_id > TileBit_Mask) {
+                brush_id = brush_id & TileBit_Mask;
               }
+
+              const x = (i % grid_x) * tile_width;
+              const y = Math.floor(i / grid_x) * tile_height;
+
+              const brush_x = (brush_id / spr.tile_count) * tile_width;
+              const brush_y = brush_id % spr.tile_count;
+
+              this.context.drawImage(
+                tileset,
+                brush_x,
+                brush_y,
+                tile_width,
+                tile_height,
+                layer.x + x,
+                layer.y + y,
+                tile_width,
+                tile_height,
+              );
             }
-            console.log(layer);
           };
           break;
         }
