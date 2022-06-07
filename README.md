@@ -7,9 +7,8 @@ GMEdit plugin for preview Game Maker room.
 - [x] Instance
 - [x] Background
 - [x] Tiles
-- [ ] Assets
-- [ ] Room setting
-- [ ] Rendering individual layers
+- [x] Rendering individual layers
+- [ ] Room setting (wip)
 - [ ] Layer properties
 - [ ] Instances Layer Properties
 - [ ] Instance Creation Order
