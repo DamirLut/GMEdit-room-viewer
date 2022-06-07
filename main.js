@@ -173,26 +173,24 @@ class RoomEditor extends $gmedit['editors.Editor'] {
             const tiles = layer.tiles.TileSerialiseData;
             for (let i = 0; i < tiles.length; i++) {
               let brush_id = tiles[i];
-              if (brush_id == 0 || brush_id == VOID_TILE) continue;
-
               if (brush_id > TileBit_Mask) {
                 brush_id = brush_id & TileBit_Mask;
               }
+              if (brush_id == 0 || brush_id == VOID_TILE) continue;
 
-              const x = (i % grid_x) * tile_width;
-              const y = Math.floor(i / grid_x) * tile_height;
-
-              const brush_x = (brush_id / spr.tile_count) * tile_width;
-              const brush_y = brush_id % spr.tile_count;
+              const x = i % grid_x;
+              const y = Math.floor(i / grid_x);
+              const brush_x = brush_id % (tile_width - 1);
+              const brush_y = Math.floor(brush_id / (tile_width - 1));
 
               this.context.drawImage(
                 tileset,
-                brush_x,
-                brush_y,
+                brush_x * tile_width,
+                brush_y * tile_width,
                 tile_width,
                 tile_height,
-                layer.x + x,
-                layer.y + y,
+                layer.x + x * tile_width,
+                layer.y + y * tile_width,
                 tile_width,
                 tile_height,
               );
