@@ -93,6 +93,25 @@ class RoomEditor extends $gmedit['editors.Editor'] {
     this.context.drawImage(image, 0, 0);
     this.context.restore();
   }
+  drawSpritePart(
+    image,
+    x = 0,
+    y = 0,
+    rotate = 0,
+    xscale = 1,
+    yscale = 1,
+    left_x,
+    top_y,
+    width,
+    height,
+  ) {
+    this.context.save();
+    this.context.translate(x, y);
+    this.context.rotate(rotate);
+    this.context.scale(xscale, yscale);
+    this.context.drawImage(image, left_x, top_y, width, height, 0, 0, width, height);
+    this.context.restore();
+  }
 
   render() {
     this.canvas.width = this.file.roomSettings.Width;
@@ -182,15 +201,17 @@ class RoomEditor extends $gmedit['editors.Editor'] {
               const y = Math.floor(i / grid_x);
               const brush_x = brush_id % (tile_width - 1);
               const brush_y = Math.floor(brush_id / (tile_width - 1));
-
-              this.context.drawImage(
+              var scaleX = tiles[i] >> TileBit_Mirror ? -1 : 1;
+              var scaleY = tiles[i] >> TileBit_Flip ? -1 : 1;
+              this.drawSpritePart(
                 tileset,
+                layer.x + x * tile_width,
+                layer.y + y * tile_width + (scaleY == -1 ? 16 : 0),
+                0,
+                scaleX,
+                scaleY,
                 brush_x * tile_width,
                 brush_y * tile_width,
-                tile_width,
-                tile_height,
-                layer.x + x * tile_width,
-                layer.y + y * tile_width,
                 tile_width,
                 tile_height,
               );
